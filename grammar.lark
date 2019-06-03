@@ -4,22 +4,22 @@
 
 start: statement+
 
-statement: INDENT* keyword NEWLINE
-         | INDENT* expression NEWLINE
-         | INDENT* raw_expr NEWLINE
+statement: INDENT* keyword NEWLINE -> keyword
+         | INDENT* expression NEWLINE -> expression
+         | INDENT* raw_expr NEWLINE -> raw_expr
 
 keyword: "def " FUNCTION ":" -> def
        | "if " expression ":" -> if
        | "else:" -> else
 
-raw_expr: "/" /.+/
+?raw_expr: "/" /.+/
 
 expression: func_call
 func_call: [F_ORIGIN ":"] FUNCTION "(" arguments? ")"
 
-value: STRING | POSITION | BLOCK | func_call
+?value: STRING | POSITION | BLOCK | func_call
 kw_arg: NAME "=" value
-argument: value | kw_arg
+?argument: value | kw_arg
 arguments: argument ("," " "? argument)*
 
 FUNCTION: /\w+/
@@ -27,7 +27,7 @@ F_ORIGIN: /\w+/
 
 NAME: /\w+/
 
-STRING: /'.+'/
+STRING: /'(.+)'/
 POSITION: /".+"/
 BLOCK: /#?[\w_]+:[\w_]+/
 
