@@ -1,0 +1,5 @@
+def cast:
+    if checkBlock("~ ~ ~", minecraft:air):
+        execute(self:test(), positioned="^ ^ ^1")
+    else:
+        setblock("~ ~ ~", minecraft:gold_block)

@@ -1,0 +1,4 @@
+# test
+def load:
+    say('Hello world!')
+    /say sup

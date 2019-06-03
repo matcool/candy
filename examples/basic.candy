@@ -1,0 +1,10 @@
+def main:
+    /say Hello world!
+    if checkBlock("~ ~-1 ~", minecraft:stone):
+        say('You are standing on stone!')
+    self:test()
+
+
+# This function will say hi
+def test:
+    say('I am from another function')
