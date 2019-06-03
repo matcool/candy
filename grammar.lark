@@ -1,3 +1,7 @@
+// List of known bugs:
+//  - Indented comments will break
+//  - Files must end with a new line
+
 start: statement+
 
 statement: INDENT* keyword NEWLINE
