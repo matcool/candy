@@ -27,7 +27,7 @@ F_ORIGIN: /\w+/
 
 NAME: /\w+/
 
-STRING: /'(.+)'/
+STRING: /'(.+?)'/
 POSITION: /".+"/
 BLOCK: /#?[\w_]+:[\w_]+/
 

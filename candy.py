@@ -5,6 +5,8 @@ import os
 import json
 import shutil
 
+import builtinCommands
+
 args = argparse.ArgumentParser()
 args.add_argument('file', help='Fishy file to compile')
 args.add_argument('-o', '--output', help='Generated datapack folder name')
@@ -12,7 +14,7 @@ args.add_argument('--force', help='Force datapack even if theres already a folde
 args = args.parse_args()
 
 with open(args.file, 'r', encoding='utf-8') as f:
-    source = f.read()
+    source = f.read() + '\n'
 
 with open('grammar.lark', 'r') as f:
     grammar = f.read()
@@ -32,7 +34,6 @@ def parse(stmt):
     # Check indentation level
     if isinstance(stmt.children[0], lark.lexer.Token) and stmt.children[0].type == 'INDENT':
         indentLevel = stmt.children[0].count(indent)
-        print(indentLevel)
         if indentLevel > len(stack):
             raise IndentationError(f'Indentation error while parsing {stmt} in line {stmt.children[0].line}')
         if indentLevel < len(stack):
@@ -55,11 +56,17 @@ def parse(stmt):
             name = f'{stack[0]}_gen{str(len(functions[stack[0]]["children"]))}'
             functions[stack[0]]['children'].append(name)
             functions[name] = {'source': ''}
-            print('The Big iF!!', keyword)
+            condition = parseExpr(keyword.children[0])
+            functions[name]['condition'] = condition
+            addSource(f'\nexecute if {condition} run function {namespace}:{name}')
 
-            addSource(f'\nexecute if {parseExpr(keyword.children[0])} run function {namespace}:{name}')
-
-            #functions[stack[-1]]['source'] += '\n' + parsers.parseIf(line.rstrip()[3:-1], f'{namespace}:{name}')
+            stack.append(name)
+        elif keyword.data == 'else':
+            name = f'{stack[0]}_gen{str(len(functions[stack[0]]["children"]))}'
+            functions[stack[0]]['children'].append(name)
+            functions[name] = {'source': ''}
+            condition = functions[functions[stack[0]]['children'][-2]]['condition']
+            addSource(f'\nexecute unless {condition} run function {namespace}:{name}')
 
             stack.append(name)
     elif stmt.data == 'expression':
@@ -72,21 +79,47 @@ def parseExpr(expr):
         return parseExpr(expr.children[0])
 
     if expr.data == 'func_call':
-        if expr.children[0].type == 'F_ORIGIN' and expr.children[0].value == 'self':
-            return f'function {namespace}:{expr.children[1].value}'
-        func = expr.children[0].value
-        args = expr.children[1].children
-        if func == 'say':
-            # say <message>
-            message = args[0][1:-1]
-            return f'say {message}'
-        elif func == 'checkBlock':
-            # checkBlock(position, block)
-            pos = args[0][1:-1]
-            block = args[1]
-            return f'block {pos} {block}'
+        return parseFuncCall(expr)        
+
+def parseValue(t):
+    if isinstance(t, lark.Tree):
+        if t.data == 'func_call': return parseFuncCall(t)
+    elif isinstance(t, lark.lexer.Token):
+        # Probably should check if they are valid instead of just returning them
+        if t.type == 'STRING': return t.value[1:-1]
+        elif t.type == 'POSITION': return t.value[1:-1]
+        elif t.type == 'BLOCK': return t.value
+
+def parseFuncCall(expr):
+    tmp = 0
+    if expr.children[0].type == 'F_ORIGIN': 
+        funcOrigin = expr.children[0]
+        tmp = 1
+    else: funcOrigin = 'builtin'
+    
+    func = expr.children[tmp].value
+    raw_args = expr.children[tmp + 1].children if len(expr.children) > tmp + 1 else ()
+    del tmp
+
+    if expr.children[0].value == 'self':
+        return f'function {namespace}:{expr.children[1].value}'
+
+    kwargs = {}
+    args = []
+    for i in raw_args:
+        if isinstance(i, lark.Tree) and i.data == 'kw_arg':
+            name = i.children[0].value
+            val = parseValue(i.children[1])
+            kwargs[name] = val
         else:
-            warnings.warn(f'Unknwon function {func} in line {expr.children[0].line}')
+            args.append(parseValue(i))
+    args = tuple(args) 
+    
+    if hasattr(builtinCommands, func):
+        return getattr(builtinCommands, func)(args, kwargs)
+    else:
+        warnings.warn(f'Unknwon function {func} in line {expr.children[0].line}')
+        return f'# unknown function {func}'
 
 for statement in parse_tree.children:
     parse(statement)
@@ -94,7 +127,7 @@ for statement in parse_tree.children:
 print('Stack: ', stack)
 print('Functions: ', functions)
 
-def makeDatapack(functions, path, description='A Fishy generated datapack', force=False):
+def makeDatapack(functions, path, description='A Candy generated datapack', force=False):
     if os.path.isdir(path):
         if force: shutil.rmtree(path)
         else: raise Exception(f'{path} is already a folder.')

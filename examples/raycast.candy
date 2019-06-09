@@ -1,5 +1,9 @@
 def cast:
     if checkBlock("~ ~ ~", minecraft:air):
-        execute(self:test(), positioned="^ ^ ^1")
+        execute(self:cast(), positioned="^ ^ ^1")
     else:
         setblock("~ ~ ~", minecraft:gold_block)
+
+def tick:
+#    /execute as @a at @a positioned ~ ~1.5 ~ run function candy_raycast:cast
+    execute(self:cast(), as='@a', at='@a', positioned="~ ~1.5 ~")
