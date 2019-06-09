@@ -56,9 +56,14 @@ def parse(stmt):
             name = f'{stack[0]}_gen{str(len(functions[stack[0]]["children"]))}'
             functions[stack[0]]['children'].append(name)
             functions[name] = {'source': ''}
+            prefix = ''
             condition = parseExpr(keyword.children[0])
+            if isinstance(condition, tuple):
+                condition, prefix = condition
+                prefix += ' '
             functions[name]['condition'] = condition
-            addSource(f'\nexecute if {condition} run function {namespace}:{name}')
+            functions[name]['conditionPrefix'] = prefix
+            addSource(f'\nexecute {prefix}if {condition} run function {namespace}:{name}')
 
             stack.append(name)
         elif keyword.data == 'else':
@@ -66,7 +71,8 @@ def parse(stmt):
             functions[stack[0]]['children'].append(name)
             functions[name] = {'source': ''}
             condition = functions[functions[stack[0]]['children'][-2]]['condition']
-            addSource(f'\nexecute unless {condition} run function {namespace}:{name}')
+            conditionPrefix = functions[functions[stack[0]]['children'][-2]]['conditionPrefix']
+            addSource(f'\nexecute {conditionPrefix}unless {condition} run function {namespace}:{name}')
 
             stack.append(name)
     elif stmt.data == 'expression':
@@ -124,8 +130,17 @@ def parseFuncCall(expr):
 for statement in parse_tree.children:
     parse(statement)
 
-print('Stack: ', stack)
-print('Functions: ', functions)
+#print('Stack: ', stack)
+#print('Functions: ', functions)
+
+def prettyFunctions(functions):
+    for fname, f in functions.items():
+        print(fname)
+        for i in f['source'].lstrip().splitlines():
+            print('  '+i)
+        print()
+        
+prettyFunctions(functions)
 
 def makeDatapack(functions, path, description='A Candy generated datapack', force=False):
     if os.path.isdir(path):

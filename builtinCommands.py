@@ -15,7 +15,8 @@ def checkBlock(args, kwargs):
     # checkBlock(position, block)
     pos = args[0]
     block = args[1]
-    return f'{_executeKwargs(kwargs).lstrip()} block {pos} {block}'
+    tmp = _executeKwargs(kwargs).lstrip()
+    return f'block {pos} {block}', tmp
 
 def execute(args, kwargs):
     # execute(function(), (lots of keyword args))
