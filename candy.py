@@ -8,8 +8,8 @@ import shutil
 import builtinCommands
 
 args = argparse.ArgumentParser()
-args.add_argument('file', help='Fishy file to compile')
-args.add_argument('-o', '--output', help='Generated datapack folder name')
+args.add_argument('file', help='Candy file to compile')
+args.add_argument('-o', '--output', help='Path for the generated datapack, if omitted will not be saved anywhere')
 args.add_argument('--force', help='Force datapack even if theres already a folder', action='store_true')
 args = args.parse_args()
 
@@ -60,7 +60,7 @@ def parse(stmt):
             condition = parseExpr(keyword.children[0])
             if isinstance(condition, tuple):
                 condition, prefix = condition
-                prefix += ' '
+                if prefix != '': prefix += ' '
             functions[name]['condition'] = condition
             functions[name]['conditionPrefix'] = prefix
             addSource(f'\nexecute {prefix}if {condition} run function {namespace}:{name}')
