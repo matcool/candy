@@ -1,0 +1,6 @@
+function load(test, nice) {
+    /say hi
+    test = 10 + 3 * 5 + (3 - 7)
+    test = 6 + test * 3
+    tellraw()
+}

@@ -1,39 +1,55 @@
-// List of known bugs:
-//  - Indented comments will break
-//  - Files must end with a new line
+start: statement*
 
-start: statement+
+?function_name: name
+?function_args: [name ("," name)*]
+function_body: statement+
+function: "function" function_name "(" function_args ")" "{" function_body "}"
 
-statement: INDENT* keyword NEWLINE -> keyword
-         | INDENT* expression NEWLINE -> expression
-         | INDENT* raw_expr NEWLINE -> raw_expr
+?statement: function
+    | raw_command
+    | name "=" expression -> assignment
+    | "return" expression -> return
+    | function_call
+    | command_call
 
-keyword: "def " FUNCTION ":" -> def
-       | "if " expression ":" -> if
-       | "else:" -> else
+function_call: namespace ":" name "(" call_args ")"
+call_args: [expression ("," expression)*]
 
-?raw_expr: "/" /.+/
+?expression: sum
+    | function_call
 
-expression: func_call
-func_call: [F_ORIGIN ":"] FUNCTION "(" arguments? ")"
+command_call: name "(" c_call_args ")"
+c_call_args: [c_expression ("," c_expression)*]
 
-?value: STRING | POSITION | BLOCK | func_call
-kw_arg: NAME "=" value
-?argument: value | kw_arg
-arguments: argument ("," " "? argument)*
+?c_expression: 
 
-FUNCTION: /\w+/
-F_ORIGIN: /\w+/
+?sum: product
+    | sum "+" product   -> add
+    | sum "-" product   -> sub
 
-NAME: /\w+/
+?product: atom
+    | product "*" atom  -> mul
+    | product "/" atom  -> div
+    | product "%" atom  -> mod
 
-STRING: /'(.+?)'/
-POSITION: /".+"/
-BLOCK: /#?[\w_]+:[\w_]+/
+?atom: number           -> number
+    | "-" atom          -> neg
+    | name              -> var
+    | "(" sum ")"
 
-NEWLINE: /(\r?\n)+/
-COMMENT: /^[ \t]*#.+\r?\n/m
-INDENT: /[ \t]+/
-WHITESPACE: /^ *\r?\n/m
-%ignore COMMENT
-%ignore WHITESPACE
+// brigadier arguments
+selector: /@["aeprs"](?:\[.+\])?/
+coords: /(?:[\^~]?-?\d* ){2}[\^~]?-?\d*/
+namespaced_id: /[\w-]+:[\w-\/\.]+/ // blocks, items, entities, etc
+
+raw_command: "/" /.+/
+
+string: ESCAPED_STRING
+?number: SIGNED_INT
+?name: CNAME
+?namespace: CNAME
+%import common.ESCAPED_STRING
+%import common.WS
+%import common.CNAME
+%import common.SIGNED_INT
+%ignore WS

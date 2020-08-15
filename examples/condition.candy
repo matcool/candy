@@ -1,6 +1,0 @@
-def main:
-    /say Hey!
-    if checkBlock("~ ~-1 ~", minecraft:stone):
-        say('You are on stone!')
-        say('Congratulations!')
-    say('Done!')

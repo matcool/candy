@@ -1,3 +1,0 @@
-def tick:
-    if checkBlock("~ ~-1 ~", minecraft:gold, as='@a', at='@a'):
-        execute(say('I am standing on gold!'), as='@s')
