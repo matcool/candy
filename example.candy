@@ -1,6 +1,16 @@
 function load(test, nice) {
+    # test
+    time = 743
+
     /say hi
-    test = 10 + 3 * 5 + (3 - 7)
-    test = 6 + test * 3
-    tellraw()
-}
+
+    ms_1 = time % 20 * 100 / 20
+    ms_0 = ms_1 / 10
+    ms_1 = ms_1 % 10
+
+    sec_1 = time / 20
+    sec_0 = sec_1 / 10
+    sec_1 = sec_1 % 10
+
+    tellraw(@s, [$sec_0, $sec_1, ".", $ms_0, $ms_1])
+}   

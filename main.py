@@ -1,14 +1,12 @@
 import lark
 import ast
-from collections import namedtuple
+import json
 
 with open('grammar.lark', 'r') as file:
     parser = lark.Lark(file.read())
 
 with open('example.candy', 'r') as file:
     tree = parser.parse(file.read())
-
-print(tree.pretty())
 
 VALUE_SB = 'value'
 VAR_PREFIX = '$'
@@ -42,8 +40,6 @@ def parse_function(tree):
             
             # god this is jank
             value = parse_expr(expr, var_name=var)
-
-            print(var, '=', value)
             if isinstance(value, list):
                 data[name].extend(value)
                 data[name].extend([
@@ -52,6 +48,8 @@ def parse_function(tree):
                 ])
             else:
                 data[name].append(sb_set(var, value))
+        elif stmt_type == 'command_call':
+            data[name].append(parse_command(stmt))
                 
             # data[name].append(f'scoreboard ')
     print('\n'.join(data[name]))
@@ -67,10 +65,9 @@ _OPERATORS = {
 
 def parse_expr(tree, **kwargs):
     expr_type = tree.data
-
     if expr_type == 'number':
         return int(tree.children[0].value)
-    elif expr_type in {'add', 'sub', 'mul', 'div'}:
+    elif expr_type in _OPERATORS:
         if not any(tree.find_data('var')):
             a = parse_expr(tree.children[0])
             b = parse_expr(tree.children[1])
@@ -104,6 +101,10 @@ class MutExprParser:
             var = self.get_next_var()
             self.commands.append(sb_set(var, tree.children[0].value))
             return var
+        elif not any(tree.find_data('var')):
+            var = self.get_next_var()
+            self.commands.append(sb_set(var, parse_expr(tree)))
+            return var
         elif type_ == 'var':
             var = tree.children[0].value
             if var == self.protected_var:
@@ -111,7 +112,7 @@ class MutExprParser:
                 self.sb_operation(new_var, '=', var)
                 var = new_var
             return var
-        elif type_ in {'add', 'sub', 'mul', 'div'}:
+        elif type_ in _OPERATORS:
             a = self.parse(tree.children[0])
             b = self.parse(tree.children[1])
             op = _OPERATORS[type_]
@@ -127,5 +128,53 @@ class MutExprParser:
             self.commands.append(sb_reset(self.var_prefix + str(i)))
         return self.commands
 
+def parse_command(tree):
+    command_name = tree.children[0].value
+    args = tree.children[1].children
+    command = [command_name]
+    for arg in args:
+        if isinstance(arg, lark.Token):
+            command.append(arg.value)
+        elif arg.data == 'selector':
+            command.append(arg.children[0].value)
+        elif arg.data == 'string':
+            command.append(arg.children[0].value)
+        # kinda jank but whatever
+        elif arg.data in {'jt_object', 'jt_array'}:
+            command.append(parse_json_text(arg))
+    return ' '.join(command)
+
+def parse_json_text(tree):
+    data = parse_jt_value(tree)
+    return json.dumps(data)
+
+def parse_jt_object(pairs):
+    return dict(parse_jt_pair(pair) for pair in pairs.children)
+
+def parse_jt_pair(values):
+    return [parse_jt_value(value) for value in values.children]
+
+def parse_jt_array(pair):
+    return tuple(parse_jt_value(value) for value in pair.children)
+
+def parse_jt_value(tree):
+    if tree.data == 'jt_object':
+        return parse_jt_object(tree)
+    elif tree.data == 'jt_array':
+        return parse_jt_array(tree)
+    elif tree.data == 'name':
+        return tree.children[0].value
+    elif tree.data == 'string':
+        return ast.literal_eval(tree.children[0].value)
+    elif tree.data == 'variable':
+        return {'score': {'name': get_var(tree.children[0].value), 'objective': VALUE_SB}}
+    elif tree.data == 'jt_const':
+        # "true" is the same as true, so just return the string (might change)
+        return tree.children[0].value
+    else:
+        breakpoint()
+        assert False
+
 for function in tree.children:
+    print(function.pretty())
     parse_function(function)

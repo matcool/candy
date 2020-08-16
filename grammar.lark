@@ -21,7 +21,12 @@ call_args: [expression ("," expression)*]
 command_call: name "(" c_call_args ")"
 c_call_args: [c_expression ("," c_expression)*]
 
-?c_expression: 
+?c_expression: selector
+    | coords
+    | string
+    | json_text
+    | name
+    | namespaced_id
 
 ?sum: product
     | sum "+" product   -> add
@@ -40,16 +45,33 @@ c_call_args: [c_expression ("," c_expression)*]
 // brigadier arguments
 selector: /@["aeprs"](?:\[.+\])?/
 coords: /(?:[\^~]?-?\d* ){2}[\^~]?-?\d*/
-namespaced_id: /[\w-]+:[\w-\/\.]+/ // blocks, items, entities, etc
+namespaced_id: /[\w\-]+:[\w\-\/\.]+/ // blocks, items, entities, etc
 
-raw_command: "/" /.+/
+// json text
+?json_text: jt_array
+?jt_value: jt_object
+    | jt_array
+    | string
+    | "$" name -> variable
+    | jt_const
+jt_array: "[" [jt_value ("," jt_value)*] "]"
+jt_object: "{" [jt_pair ("," jt_pair)*] "}"
+?jt_key: string
+    | name -> name
+jt_pair: jt_key ":" jt_value
+!jt_const: "true" | "false" | "null"
+
+raw_command: _NEWLINE "/" /.+/
 
 string: ESCAPED_STRING
 ?number: SIGNED_INT
 ?name: CNAME
 ?namespace: CNAME
+_NEWLINE: NEWLINE
 %import common.ESCAPED_STRING
 %import common.WS
 %import common.CNAME
 %import common.SIGNED_INT
+%import common.NEWLINE
 %ignore WS
+%ignore /#[^\n]*/
